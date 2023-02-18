@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <main class="main">
+        <article class="nav col">
+            {% set page = get_page(path="about-me.md") %}
+            <h1 class="title">
+                <a href="#{{page.slug}}"> {{ page.title }}</a>
+            </h1>
+            {{ page.content | safe }}
+        </article>
+        <nav class="about col">
+            {% for subsel in section.subsections %}
+                <section>
+                    {% set sec = get_section(path=subsel) %}
+                    <h2 class="section-header">
+                        <a href=#{{sec.title}}> {{sec.title}} </a>
+                    </h2>
+                    <ul>
+                        {% for page in sec.pages %}
+                            <li><a href="{{page.permalink | safe}}">{{page.title}}</a></li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endfor %}
+        </nav>
+    </main>
+{% endblock content %}

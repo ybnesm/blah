@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>MyBlog</title>
+    <link rel="stylesheet" href="{{ get_url(path="base.css") }}">
+    {% block css %} {% endblock css %}
+
+</head>
+
+<body>
+    <header id="title-bar">
+        <div id="logo">
+            <a id="logo" class="no-link-css" href="/">
+                <img src="{{ get_url(path="duck-ai.png") }}">
+            </a>
+        </div>
+
+        <h1 id="title">
+            <div id="title-layer1" class="layer">
+                Ybnesm
+                <div id="title-layer2" class="layer">
+                    Ybnesm
+                    <div id="title-layer3" class="layer">
+                        <a class="no-link-css" href="/">
+                            Ybnesm
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </h1>
+    </header>
+
+    {% block content %}
+    {% endblock content %}
+</body>
+
+</html>
