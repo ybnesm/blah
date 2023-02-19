@@ -17,25 +17,27 @@ In this article, I'll tell you how I gathered bits of information from the web a
 _Observer_ is a simple pattern, that can be understood and used in 15 minutes. It works perfectly with C#, Java, and other garbage languages 🤗. However, all the online resources about Rust I've found are missing one feature of the _Observer_ pattern that pissed me off - _Unsubscribe_ mechanism. Article owners completely ignore it or implement it through generics (boring and not very flexible). So I decided to dive in and implement it myself as the discoverer.
 To write an _unsubscribe_ mechanism we need to somehow compare two _trait objects_. This cannot be done without some kind of crutches. Well, I found two methods.
 
-The most I've come across is this [discussion](https://users.rust-lang.org/t/how-to-compare-two-trait-objects-for-equality/88063) but it's boring, long, and uninteresting. There is a smaller version of the discussion in the  [blog](https://dev.to/magnusstrale/rust-trait-objects-in-a-vector-non-trivial-4co5). This is one way and it works, life is good, there is even a [library](https://crates.io/crates/dyn_partial_eq) to avoid writing a lot of boilerplate code. There is one minus - it's cringe. What the hell is _double dynamic dispatch_, I'd rather install _Free Pascal_ than understand what's going on (tbh, it isn't that hard).
+The most I've come across is this [discussion](https://users.rust-lang.org/t/how-to-compare-two-trait-objects-for-equality/88063) but it's boring, long, and uninteresting. There is a smaller version of the discussion in the  [blog](https://dev.to/magnusstrale/rust-trait-objects-in-a-vector-non-trivial-4co5). This is one way and it works, life is good, there is even a [library](https://crates.io/crates/dyn_partial_eq) to avoid writing a lot of boilerplate code. There is one minus - it's cringe. What the hell is _double dynamic dispatch_, I'd rather install _Free Pascal_ than understand what's going on (tbh, it isn't that hard). But don't get me wrong, _double dynamic dispatch_ is useful if you want to implement a `PartialEq` for a trait, but there is an easier solution for the Observer pattern since we don't need to compare field by field.
 
 ## Sweeter bolder better
-[🤥](https://youtu.be/yTa1KzV2Tb8)
-It's great that people discovered the _unique identifier_ thing, so now we can do the work that Rust is too lazy to do (or has reasons not to do). Essentially, we'll just set the _Id_ for all trait objects we create. And then we can easily implement _PartialEq_ for _trait_ by calling _id getter_. It will look something like this:
+[🤥](https://youtu.be/yTa1KzV2Tb8)  
+In the observer pattern, especially for _unsubscribe_, there is no need to compare complete objects (field by field), all we need to know is whether the objects point to the same memory location. In early versions of this article, I used `uuid` crate for this task, but with the help of [community](https://www.reddit.com/r/rust/comments/115fejz/comment/j95eq2c/?utm_source=share&utm_medium=web2x&context=3) I learned that _raw pointers_ can simplify code.
+It will look something like this:
 ``` rust
-use uuid::Uuid;
-trait Foo {
-    fn bar(&self);
-    fn get_uuid(&self) -> Uuid;
+fn main() {
+    let a = &A::new() as &dyn Foo;
+    let b = &A::new() as &dyn Foo;
+    assert_ne!(a as *const dyn Foo, b as *const dyn Foo);
+    assert_eq!(a as *const dyn Foo, a as *const dyn Foo);
 }
-impl PartialEq for dyn Foo {
-    fn eq(&self, other: &Self) -> bool {
-        self.get_uuid() == other.get_uuid()
-    }
+trait Foo {}
+struct A;
+impl A {
+    fn new() -> Self {}
 }
+impl Foo for A {}
 ```
-
-I'll use [uuid crate](https://crates.io/crates/uuid) for generation. For each _struct_ that implements the _trait_ we want to compare, we need to generate a _unique identifier_ and write a _getter_. Luckily, we can have methods with the same name in different [_traits_](https://doc.rust-lang.org/rust-by-example/trait/disambiguating.html), this won't be a problem. Now if you were only interested in comparing _trait objects_ you can close this article, below I'll show a complete implementation of the _Observer_ pattern with lots of _traits_ and no _KISS_.
+Now if you were only interested in comparing _trait objects_ (mock comparison) you can close this article, below I'll show a complete implementation of the _Observer_ pattern with lots of _traits_ and no _KISS_.
 
 ## Observer
 I assume you know what _Observer_ is. In two words: some objects subscribe (they are _Observers_) to news from other objects (they are _Subjects_). When _Subjects_ change their state, they call a certain _Observers_ method and pass information. I'll implement the pattern using an example from the book _"Head First"_.
@@ -44,7 +46,7 @@ The task sounds like this: _The three players in the system are the weather stat
 
 ![Uml diagram](uml-diagram.png)
 
-There are two ways to implement the pattern: _"push Observer"_ and _"pull Observer"_. _"Push"_ is when _Subjects_ pass their data to the common interface method `update(data1, data2)`. _"Pull"_ is when _Subjects_ pass themselves to the common interface method, so every _Observer_ can get data that it needs via API `update(&I)`. The second option is considered _better_, because you won't need to change the signature of all methods when adding a new parameter. I'll show you _"Pull"_, but the [first version](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=784ec053e7bcb8f2d4ebe4a36d902ef0) of this article had _"Push"_.  
+There are two ways to implement the pattern: _"push Observer"_ and _"pull Observer"_. _"Push"_ is when _Subjects_ pass their data to the common interface method `update(data1, data2)`. _"Pull"_ is when _Subjects_ pass themselves to the common interface method, so every _Observer_ can get data that it needs via API `update(&I)`. The second option is considered _better_, because you won't need to change the signature of all methods when adding a new parameter. I show you _"Pull"_.
 
 First, we need to define a _trait_ for _Subjects_ - objects that produce some data. In our case, observers want to get weather data, so we also create some API for them:
 ``` rust
@@ -96,8 +98,10 @@ impl Subject for WeatherData {
 
     fn remove_observer(&mut self, observer: Rc<RefCell<dyn Observer>>) {
         self.observers.retain(|obj| {
-            obj.upgrade()
-                .map_or(false, |left_obs| *left_obs.borrow() != *observer.borrow())
+            obj.upgrade().map_or(false, |left_obs| {
+                &*left_obs.borrow() as *const dyn Observer
+                    != &*observer.borrow() as *const dyn Observer
+            })
         })
     }
 
@@ -122,18 +126,22 @@ impl Subject for WeatherData {
     }
 }
 ```
-Each time before removing or notifying observers we delete nonexistent references (converting from _Weak_ to _Rc_ returns _None_: `weak.upgrade().is_some()`. All implementations of the _Observer_ pattern that I've seen have had no option to _unsubscribe_ from _subject_. I did it 🙂. In some cases, the _generic vector_ `observers: Vec<impl Foo>` was used, and in some cases, this option was completely ignored, which is pointless, since it is one of the power features of the pattern.
+Each time before removing or notifying observers we delete nonexistent references (converting from _Weak_ to _Rc_ returns _None_: `weak.upgrade().is_some()`. All implementations of the _Observer_ pattern that I've seen have had no option to _unsubscribe_ from _subject_. I did it 🙂. In some cases, the _generic vector_ `observers: Vec<impl Foo>` was used, and in some cases, this option was completely ignored, which is pointless, since it is one of the power features of the pattern.  
+Let's understand what's going on here:
+``` rust
+self.observers.retain(|obj| {
+    obj.upgrade().map_or(false, |left_obs| {
+        &*left_obs.borrow() as *const dyn Observer
+            != &*observer.borrow() as *const dyn Observer
+    })
+})
+```
+We are removing a particular _observer_ from our list of subscribers. `retain` leaves only those elements in the vector for which we return _true_. After checking that the pointer to _observer_ still exists - `upgrade`, we borrow the value from `RefCell`, and since it doesn't return `&dyn Observer`, but returns `Ref<'_, T>`, we need to dereference that value manually. To get the actual pointer, we need to convert our `dyn Observer` to `&dyn Observer`, and only after all these operations does Rust perform the cast to `*const dyn Observer`.
 
-Let's move on to the _Observer_ trait. Along with the usual _update_ method, we also need a _getter_ to compare two _trait objects_, no way without it. Note that we pass only a reference to a _Subject_ objects to get only the data we need:
+Let's move on to the _Observer_ trait. Note that we pass only a reference to a _Subject_ object to get only the data we need (_Pull Observer_):
 ``` rust
 trait Observer {
     fn update(&mut self, subject: &dyn Subject);
-    fn get_uuid(&self) -> Uuid;
-}
-impl PartialEq for dyn Observer {
-    fn eq(&self, other: &Self) -> bool {
-        self.get_uuid() == other.get_uuid()
-    }
 }
 ```
 
@@ -151,7 +159,6 @@ struct CurrentConditionsDisplay {
     weather_data: Weak<RefCell<dyn Subject>>,
     temperature: f32,
     humidity: f32,
-    uuid: Uuid,
 }
 impl CurrentConditionsDisplay {
     fn new(weather_data: Rc<RefCell<dyn Subject>>) -> Rc<RefCell<Self>> {
@@ -159,7 +166,6 @@ impl CurrentConditionsDisplay {
             weather_data: Rc::downgrade(&weather_data),
             temperature: 0.0,
             humidity: 0.0,
-            uuid: Uuid::new_v4(),
         }));
         weather_data
             .borrow_mut()
@@ -168,7 +174,7 @@ impl CurrentConditionsDisplay {
     }
 }
 ```
-All is happening here: we create the new object and generate a unique id for it to compare it with other _trait objects_ in the future. And we also immediately subscribe to the weather feed. We keep a reference to _dyn Subject_ so that you can unsubscribe from news in the future, but I did not write such a method, we will do it manually later.
+Everything happens here: a new object is created and moved to two smart pointers so that you don't have to do it manually every time in the main; subscribe to the weather feed. We keep a reference to _dyn Subject_ so that you can unsubscribe from news in the future, but I did not write such a method, we will do it manually later.
 
 And the last part of _Observer_ pattern, nothing special:
 ``` rust
@@ -177,10 +183,6 @@ impl Observer for CurrentConditionsDisplay {
         self.temperature = subject.get_temperature();
         self.humidity = subject.get_humidity();
         self.display()
-    }
-
-    fn get_uuid(&self) -> Uuid {
-        self.uuid
     }
 }
 impl DisplayElement for CurrentConditionsDisplay {
@@ -228,11 +230,18 @@ Set #3:
 ## What we achieved
 * We disgraced all OOP principles and wrote ridiculous code that no one will ever write in their life.
 * We have implemented the Observer design pattern; I have read the second chapter of _"Head First"_ and can continue reading.
-* Compared trait objects without _double dynamic dispatch_.
+* Compared pointers to trait objects without complex _double dynamic dispatch_.
 * Composition over inheritance :)
 * Encapsulation :)
 
 ## Hell Yes
-Huh, I don't know why I showed so much code when I could just comment out the code and put it on the [Rust Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=2b6b1e4b30d024c50fc3cba42516e98e) (feel free to send patches). Maybe because I wanted to write my first article, which will receive many corrections before it becomes "correct". Because at the time of writing the article, I have only been studying this grail for 2 months. Therefore, if you saw any syntax error (I hate English articles), or my ignorance in some Rust issue, please contact: [_Reddit post_](https://www.reddit.com/r/rust/comments/115fejz/true_observer_pattern_with_unsubscribe_mechanism/?utm_source=share&utm_medium=web2x&context=3) or _yurii.shymon@gmail.com_. I would give a link to the repository, but probably this article is kept private with a link to a static site.
+Huh, I don't know why I showed so much code when I could just comment out the code and put it on the Rust Playground. Feel free to submit corrections. Link to the code in the _Revisions_ section. Maybe because I wanted to write my first article, which will receive many corrections before it becomes "correct". Because at the time of writing the article, I have only been studying this grail for 2 months. Therefore, if you saw any syntax error (I hate English articles), or my ignorance in some Rust issue, please contact: [_Reddit post_](https://www.reddit.com/r/rust/comments/115fejz/true_observer_pattern_with_unsubscribe_mechanism/?utm_source=share&utm_medium=web2x&context=3) or _yurii.shymon@gmail.com_.
 
 Cheers 🦆
+
+---
+
+## Revisions
+* 2023-02-17: [Original post](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=784ec053e7bcb8f2d4ebe4a36d902ef0)
+* 2023-02-18: [Changed implementation from _Push_ to _Pull_ Observer](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=2b6b1e4b30d024c50fc3cba42516e98e)
+* 2023-02-19: [Compare trait objects with `*const` instead of `PartialEq` and `uuid`](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=b2d927d15a4e603d844edf09178a9ed0)
