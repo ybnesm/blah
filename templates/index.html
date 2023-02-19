@@ -2,18 +2,11 @@
 
 {% block content %}
     <main class="main">
-        <article class="nav col">
-            {% set page = get_page(path="about-me.md") %}
-            <h1 class="title">
-                <a href="#{{page.slug}}"> {{ page.title }}</a>
-            </h1>
-            {{ page.content | safe }}
-        </article>
-        <nav class="about col">
+        <nav class="nav col">
             {% for subsel in section.subsections %}
                 <section>
                     {% set sec = get_section(path=subsel) %}
-                    <h2 class="section-header">
+                    <h2 id="{{sec.title}}" class="section-header">
                         <a href=#{{sec.title}}> {{sec.title}} </a>
                     </h2>
                     <ul>
@@ -24,5 +17,12 @@
                 </section>
             {% endfor %}
         </nav>
+        <article class="about col">
+            {% set page = get_page(path="about-me.md") %}
+            <h2 id="{{page.slug}}" class="title">
+                <a href="#{{page.slug}}"> {{ page.title }}</a>
+            </h2>
+            {{ page.content | safe }}
+        </article>
     </main>
 {% endblock content %}

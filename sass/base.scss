@@ -1,5 +1,8 @@
 @media all and (max-width: 767px) {
     /* smol */
+    .main {
+        flex-wrap: wrap;
+    }
     #title-bar {
     }
     #title {
@@ -25,6 +28,12 @@
     #layer3,#title-layer3 {
         mix-blend-mode: darken;
         text-shadow: 2px 1px 0 rgba(255,0,255,1);
+    }
+    .about {
+        order: 2;
+    }
+    .nav {
+        order: 1;
     }
 }
 
@@ -52,6 +61,12 @@
     #layer3,#title-layer3  {
         mix-blend-mode: darken;
         text-shadow: 5px 2px 0 rgba(255,0,255,1);
+    }
+    .about {
+        order: 1;
+    }
+    .nav {
+        order: 2;
     }
 }
 
@@ -125,9 +140,6 @@ article.content {
     max-width: 50vw;
     margin: auto;
 }
-article h2 {
-    font-size: 1.3em;
-}
 
 .col {
     flex: 50%;
@@ -148,7 +160,7 @@ code {
     padding:2px 4px;
     // color:#d14;
     white-space:nowrap;
-    background-color:#f7f7f9;
+    background-color:#f5f5f5;
     border:1px solid #e1e1e8;
 }
 pre {
@@ -177,6 +189,8 @@ body {
     // font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
     margin-bottom: 5em;
     letter-spacing: 0;
+    // Remove it when you have enough body content for scroll-bar
+    min-height: 90vh;
 }
 
 p {

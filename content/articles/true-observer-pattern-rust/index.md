@@ -44,17 +44,20 @@ The task sounds like this: _The three players in the system are the weather stat
 
 ![Uml diagram](uml-diagram.png)
 
-There are two ways to implement the pattern: _"push Observer"_ and _"pull Observer"_. _"Push"_ is when _Subjects_ pass their data to the common interface method `update(data1, data2)`. _"Pull"_ is when _Subjects_ pass themselves to the common interface method, so every _Observer_ can get data that it needs via API `update(&I)`. The second option is considered _better_, because you won't need to change the signature of all methods when adding a new parameter. However, I'm too lazy to redo it. Eat what is served 😎.
+There are two ways to implement the pattern: _"push Observer"_ and _"pull Observer"_. _"Push"_ is when _Subjects_ pass their data to the common interface method `update(data1, data2)`. _"Pull"_ is when _Subjects_ pass themselves to the common interface method, so every _Observer_ can get data that it needs via API `update(&I)`. The second option is considered _better_, because you won't need to change the signature of all methods when adding a new parameter. I'll show you _"Pull"_, but the [first version](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=784ec053e7bcb8f2d4ebe4a36d902ef0) of this article had _"Push"_.  
 
-First, we need to define a _trait_ for _Subjects_ - objects that produce some data:
+First, we need to define a _trait_ for _Subjects_ - objects that produce some data. In our case, observers want to get weather data, so we also create some API for them:
 ``` rust
 trait Subject {
     fn register_observer(&mut self, observer: Weak<RefCell<dyn Observer>>);
     fn remove_observer(&mut self, observer: Rc<RefCell<dyn Observer>>);
     fn notify_observer(&mut self);
+
+    fn get_temperature(&self) -> f32;
+    fn get_humidity(&self) -> f32;
 }
 ```
-`Rc<RefCell<dyn Observer>>`: we want to notify followers and they probably want to change their state too, so we need interior mutability.
+`Rc<RefCell<dyn Observer>>`: we want to notify followers and they probably want to change their state too, so we need interior mutability.  
 `Weak<RefCell<dyn Observer>>`: _subjects_ do not own their observers, so we have only weak references to them. The observer can be removed at runtime. If this happens, we will simply remove the non-existent reference.
 
 Create one _Subject_ that will report the current temperature:
@@ -110,14 +113,21 @@ impl Subject for WeatherData {
                 .update(self.temperature, self.humidity, self.pressure);
         }
     }
+    
+    fn get_temperature(&self) -> f32 {
+        self.temperature
+    }
+    fn get_humidity(&self) -> f32 {
+        self.humidity
+    }
 }
 ```
 Each time before removing or notifying observers we delete nonexistent references (converting from _Weak_ to _Rc_ returns _None_: `weak.upgrade().is_some()`. All implementations of the _Observer_ pattern that I've seen have had no option to _unsubscribe_ from _subject_. I did it 🙂. In some cases, the _generic vector_ `observers: Vec<impl Foo>` was used, and in some cases, this option was completely ignored, which is pointless, since it is one of the power features of the pattern.
 
-Let's move on to the _Observer_ trait. Along with the usual _update_ method, we also need a _getter_ to compare two _trait objects_, no way without it:
+Let's move on to the _Observer_ trait. Along with the usual _update_ method, we also need a _getter_ to compare two _trait objects_, no way without it. Note that we pass only a reference to a _Subject_ objects to get only the data we need:
 ``` rust
 trait Observer {
-    fn update(&mut self, temp: f32, humidity: f32, pressure: f32);
+    fn update(&mut self, subject: &dyn Subject);
     fn get_uuid(&self) -> Uuid;
 }
 impl PartialEq for dyn Observer {
@@ -163,9 +173,9 @@ All is happening here: we create the new object and generate a unique id for it 
 And the last part of _Observer_ pattern, nothing special:
 ``` rust
 impl Observer for CurrentConditionsDisplay {
-    fn update(&mut self, temp: f32, humidity: f32, _pressure: f32) {
-        self.temperature = temp;
-        self.humidity = humidity;
+    fn update(&mut self, subject: &dyn Subject) {
+        self.temperature = subject.get_temperature();
+        self.humidity = subject.get_humidity();
         self.display()
     }
 
@@ -223,6 +233,6 @@ Set #3:
 * Encapsulation :)
 
 ## Hell Yes
-Huh, I don't know why I showed so much code when I could just comment out the code and put it on the [Rust Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=784ec053e7bcb8f2d4ebe4a36d902ef0) (feel free to send patches). Maybe because I wanted to write my first article, which will receive many corrections before it becomes "correct". Because at the time of writing the article, I have only been studying this grail for 2 months. Therefore, if you saw any syntax error (I hate English articles), or my ignorance in some Rust issue, please contact: _yurii.shymon@gmail.com_. I would give a link to the repository, but probably this article is kept private with a link to a static site.
+Huh, I don't know why I showed so much code when I could just comment out the code and put it on the [Rust Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=2b6b1e4b30d024c50fc3cba42516e98e) (feel free to send patches). Maybe because I wanted to write my first article, which will receive many corrections before it becomes "correct". Because at the time of writing the article, I have only been studying this grail for 2 months. Therefore, if you saw any syntax error (I hate English articles), or my ignorance in some Rust issue, please contact: [_Reddit post_](https://www.reddit.com/r/rust/comments/115fejz/true_observer_pattern_with_unsubscribe_mechanism/?utm_source=share&utm_medium=web2x&context=3) or _yurii.shymon@gmail.com_. I would give a link to the repository, but probably this article is kept private with a link to a static site.
 
 Cheers 🦆
