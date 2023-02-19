@@ -15,13 +15,13 @@ In this article, I'll tell you how I gathered bits of information from the web a
 
 ## Um, what's the problem?
 _Observer_ is a simple pattern, that can be understood and used in 15 minutes. It works perfectly with C#, Java, and other garbage languages 🤗. However, all the online resources about Rust I've found are missing one feature of the _Observer_ pattern that pissed me off - _Unsubscribe_ mechanism. Article owners completely ignore it or implement it through generics (boring and not very flexible). So I decided to dive in and implement it myself as the discoverer.
-To write an _unsubscribe_ mechanism we need to somehow compare two _trait objects_. This cannot be done without some kind of crutches. Well, I found two methods.
+In order to write an _unsubscribe_ mechanism, we need to somehow compare two _trait objects_. We don't need to do a deep comparison by value because all we need to know at _unsubscribe_ is whether the two objects are the same by reference.
 
-The most I've come across is this [discussion](https://users.rust-lang.org/t/how-to-compare-two-trait-objects-for-equality/88063) but it's boring, long, and uninteresting. There is a smaller version of the discussion in the  [blog](https://dev.to/magnusstrale/rust-trait-objects-in-a-vector-non-trivial-4co5). This is one way and it works, life is good, there is even a [library](https://crates.io/crates/dyn_partial_eq) to avoid writing a lot of boilerplate code. There is one minus - it's cringe. What the hell is _double dynamic dispatch_, I'd rather install _Free Pascal_ than understand what's going on (tbh, it isn't that hard). But don't get me wrong, _double dynamic dispatch_ is useful if you want to implement a `PartialEq` for a trait, but there is an easier solution for the Observer pattern since we don't need to compare field by field.
+The most I've come across is this [discussion](https://users.rust-lang.org/t/how-to-compare-two-trait-objects-for-equality/88063) but it's long and not exactly what we need. There is a smaller version of the discussion in the  [blog](https://dev.to/magnusstrale/rust-trait-objects-in-a-vector-non-trivial-4co5). But don't get me wrong, _double dynamic dispatch_ is useful if you want to implement a `PartialEq` for a trait, but there is an easier solution for the Observer pattern since we don't need to compare field by field, we need to compare by reference.
 
 ## Sweeter bolder better
 [🤥](https://youtu.be/yTa1KzV2Tb8)  
-In the observer pattern, especially for _unsubscribe_, there is no need to compare complete objects (field by field), all we need to know is whether the objects point to the same memory location. In early versions of this article, I used `uuid` crate for this task, but with the help of [community](https://www.reddit.com/r/rust/comments/115fejz/comment/j95eq2c/?utm_source=share&utm_medium=web2x&context=3) I learned that _raw pointers_ can simplify code.
+In the observer pattern, especially for _unsubscribe_, there is no need to compare complete objects (field by field), all we need to know is whether the objects point to the same memory location. In early versions of this article, I used `uuid` crate for this task, but with the help of [community](https://www.reddit.com/r/rust/comments/115fejz/comment/j95eq2c/?utm_source=share&utm_medium=web2x&context=3) I learned that _raw pointers_ can simplify code. It's also worth noting that using _double dynamic dispatch_ in the case of the Observer pattern is completely wrong, even though I thought the opposite :) There is a possibility that all the struct fields will be the same, but technically they are different observers since they were created separately.
 It will look something like this:
 ``` rust
 fn main() {
@@ -37,7 +37,7 @@ impl A {
 }
 impl Foo for A {}
 ```
-Now if you were only interested in comparing _trait objects_ (mock comparison) you can close this article, below I'll show a complete implementation of the _Observer_ pattern with lots of _traits_ and no _KISS_.
+Now if you were only interested in comparing _trait objects_ as pointers you can close this article, below I'll show a complete implementation of the _Observer_ pattern with lots of _traits_ and no _KISS_.
 
 ## Observer
 I assume you know what _Observer_ is. In two words: some objects subscribe (they are _Observers_) to news from other objects (they are _Subjects_). When _Subjects_ change their state, they call a certain _Observers_ method and pass information. I'll implement the pattern using an example from the book _"Head First"_.
@@ -127,6 +127,7 @@ impl Subject for WeatherData {
 }
 ```
 Each time before removing or notifying observers we delete nonexistent references (converting from _Weak_ to _Rc_ returns _None_: `weak.upgrade().is_some()`. All implementations of the _Observer_ pattern that I've seen have had no option to _unsubscribe_ from _subject_. I did it 🙂. In some cases, the _generic vector_ `observers: Vec<impl Foo>` was used, and in some cases, this option was completely ignored, which is pointless, since it is one of the power features of the pattern.  
+
 Let's understand what's going on here:
 ``` rust
 self.observers.retain(|obj| {
@@ -230,7 +231,7 @@ Set #3:
 ## What we achieved
 * We disgraced all OOP principles and wrote ridiculous code that no one will ever write in their life.
 * We have implemented the Observer design pattern; I have read the second chapter of _"Head First"_ and can continue reading.
-* Compared pointers to trait objects without complex _double dynamic dispatch_.
+* We compared trait objects by reference without _third-party_ libraries.
 * Composition over inheritance :)
 * Encapsulation :)
 
@@ -242,6 +243,6 @@ Cheers 🦆
 ---
 
 ## Revisions
-* 2023-02-17: [Original post](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=784ec053e7bcb8f2d4ebe4a36d902ef0)
-* 2023-02-18: [Changed implementation from _Push_ to _Pull_ Observer](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=2b6b1e4b30d024c50fc3cba42516e98e)
 * 2023-02-19: [Compare trait objects with `*const` instead of `PartialEq` and `uuid`](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=b2d927d15a4e603d844edf09178a9ed0)
+* 2023-02-18: [Changed implementation from _Push_ to _Pull_ Observer](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=2b6b1e4b30d024c50fc3cba42516e98e)
+* 2023-02-17: [Original post](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=784ec053e7bcb8f2d4ebe4a36d902ef0)
