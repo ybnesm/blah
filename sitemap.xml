@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://ybnesm.github.io/blah/</loc>
+    </url>
+    <url>
+        <loc>https://ybnesm.github.io/blah/about-me/</loc>
+    </url>
+    <url>
+        <loc>https://ybnesm.github.io/blah/articles/</loc>
+    </url>
+    <url>
+        <loc>https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/</loc>
+        <lastmod>2023-02-17</lastmod>
+    </url>
+</urlset>

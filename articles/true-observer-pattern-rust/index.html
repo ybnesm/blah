@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>MyBlog</title>
+    <link rel="stylesheet" href="https://ybnesm.github.io/blah/base.css">
+     
+
+</head>
+
+<body>
+    <header id="title-bar">
+        <div id="logo">
+            <a id="logo" class="no-link-css" href="https://ybnesm.github.io/blah">
+                <img src="https://ybnesm.github.io/blah/duck-ai.png">
+            </a>
+        </div>
+
+        <h1 id="title">
+            <div id="title-layer1" class="layer">
+                Woojiq
+                <div id="title-layer2" class="layer">
+                    Woojiq
+                    <div id="title-layer3" class="layer">
+                        <a class="no-link-css" href="https://ybnesm.github.io/blah">
+                            Woojiq
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </h1>
+    </header>
+
+    
+<article class="content">
+    <h1>True Observer Pattern with Unsubscribe mechanism using Rust</h1>
+    <p>2023-02-17</p>
+    
+        <ol class="toc">
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#will-learn-the-design-patterns-and-become-cool-honestly">Will learn the design patterns and become cool, honestly</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#i-like-rust-cause-it-doesn-t-have-full-oop-how-to-implement-this-oop-feature">I like Rust, cause it doesn&#x27;t have full OOP... how to implement this OOP feature?</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#um-what-s-the-problem">Um, what&#x27;s the problem?</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#sweeter-bolder-better">Sweeter bolder better</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#observer">Observer</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#println-works-lol">Println!(&quot;works, lol!&quot;)</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#what-we-achieved">What we achieved</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#hell-yes">Hell Yes</a>
+                
+            </li>
+        
+            <li>
+                <a href="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/#revisions">Revisions</a>
+                
+            </li>
+        
+        </ol>
+    
+
+    <blockquote>
+<p>In memory of all the Rustaceans who stopped learning OOP patterns due to the inability to implement an unsubscribe mechanism in the Observer pattern.</p>
+</blockquote>
+<h2 id="will-learn-the-design-patterns-and-become-cool-honestly"><a class="zola-anchor" href="#will-learn-the-design-patterns-and-become-cool-honestly" aria-label="Anchor link for: will-learn-the-design-patterns-and-become-cool-honestly">Will learn the design patterns and become cool, honestly</a></h2>
+<p>Idk, how it is with healthy people, but I usually want to finish something, even if I don't need it right now. E.g, read the entire <em><a href="https://www.oreilly.com/library/view/programming-rust-2nd/9781492052586/">&quot;Programming Rust&quot;</a></em> book without practicing the knowledge gained, just read it. The main thing is that I read it and can mark it as completed. The same thing happened once when I wanted to learn about all design patterns. Of course not <em>All</em>, I found the resource <a href="https://refactoring.guru/design-patterns/catalog"><em>Refactoring Guru</em></a> and set myself the goal: &quot;understand all patterns and implement them&quot;. And now I have a course at the university where we are taught the most popular ones, so I have a lot of time to kill without regret. But my goal sounds boring, doesn't it? So to rack my brain a bit I wanted to implement all patterns in a not <em>True OOP</em> language. <strong>Rust</strong>. <em>Actually, I recently started learning Rust and thought it'd be a good idea.</em> After coding 5 of them I realized that <em>&quot;Refactoring guru&quot;</em> wasn't giving me the full picture of design patterns. I read a bit of <em>Reddit</em> and found the book <em><a href="https://www.oreilly.com/library/view/head-first-design/0596007124/">&quot;Head First Design Patterns&quot;</a></em>. After one chapter I realized that this book is what I need. And now the key objective of this article - the <em>Observer</em> pattern - enters the scene. There were no problems with it, it is a very convenient and useful pattern, but I wouldn't have written so much of a preface if I could easily implement this pattern on Rust.</p>
+<h2 id="i-like-rust-cause-it-doesn-t-have-full-oop-how-to-implement-this-oop-feature"><a class="zola-anchor" href="#i-like-rust-cause-it-doesn-t-have-full-oop-how-to-implement-this-oop-feature" aria-label="Anchor link for: i-like-rust-cause-it-doesn-t-have-full-oop-how-to-implement-this-oop-feature">I like Rust, cause it doesn't have full OOP... how to implement this OOP feature?</a></h2>
+<p>The first month with Rust made me wonder how such a perfect thing is available in our horrible world: no full OOP, error handling, none, match, etc. But for some reason 🙃, when you want to implement a pattern, as it is shown in the book, you suddenly start to lack inheritance and abstract classes... Almost everything can be done using generics, but it isn't interesting, I want it to be like in the book:) It turned out that porting Java to Rust isn't an easy task. Well, it is simple, but up to a certain point. And this point is a comparison of two trait objects. Not sure that you can say <em>trait objects</em>, since <em>trait</em> isn't the same as <em>interface</em>. Therefore <code>&amp;dyn Lol == &amp;dyn Lol</code> doesn't work, but I'd like to. Fortunately, Rust becomes very nice as long you don't insult <a href="https://internals.rust-lang.org/t/pronoun-policy/2111/29">they</a>, and accept their rules of the game.</p>
+<p>In this article, I'll tell you how I gathered bits of information from the web and found the best way to compare two <em>trait objects</em> (don't tell me it is obvious, I'll panic). And since I needed it to implement the <em>Observer</em> pattern, I'll show its implementation as if Rust were the <em>True OOP</em> language.</p>
+<h2 id="um-what-s-the-problem"><a class="zola-anchor" href="#um-what-s-the-problem" aria-label="Anchor link for: um-what-s-the-problem">Um, what's the problem?</a></h2>
+<p><em>Observer</em> is a simple pattern, that can be understood and used in 15 minutes. It works perfectly with C#, Java, and other garbage languages 🤗. However, all the online resources about Rust I've found are missing one feature of the <em>Observer</em> pattern that pissed me off - <em>Unsubscribe</em> mechanism. Article owners completely ignore it or implement it through generics (boring and not very flexible). So I decided to dive in and implement it myself as the discoverer.
+In order to write an <em>unsubscribe</em> mechanism, we need to somehow compare two <em>trait objects</em>. We don't need to do a deep comparison by value because all we need to know at <em>unsubscribe</em> is whether the two objects are the same by reference.</p>
+<p>The most I've come across is this <a href="https://users.rust-lang.org/t/how-to-compare-two-trait-objects-for-equality/88063">discussion</a> but it's long and not exactly what we need. There is a smaller version of the discussion in the  <a href="https://dev.to/magnusstrale/rust-trait-objects-in-a-vector-non-trivial-4co5">blog</a>. But don't get me wrong, <em>double dynamic dispatch</em> is useful if you want to implement a <code>PartialEq</code> for a trait, but there is an easier solution for the Observer pattern since we don't need to compare field by field, we need to compare by reference.</p>
+<h2 id="sweeter-bolder-better"><a class="zola-anchor" href="#sweeter-bolder-better" aria-label="Anchor link for: sweeter-bolder-better">Sweeter bolder better</a></h2>
+<p><a href="https://youtu.be/yTa1KzV2Tb8">🤥</a><br />
+In the observer pattern, especially for <em>unsubscribe</em>, there is no need to compare complete objects (field by field), all we need to know is whether the objects point to the same memory location. In early versions of this article, I used <code>uuid</code> crate for this task, but with the help of <a href="https://www.reddit.com/r/rust/comments/115fejz/comment/j95eq2c/?utm_source=share&amp;utm_medium=web2x&amp;context=3">community</a> I learned that <em>raw pointers</em> can simplify code. It's also worth noting that using <em>double dynamic dispatch</em> in the case of the Observer pattern is completely wrong, even though I thought the opposite :) There is a possibility that all the struct fields will be the same, but technically they are different observers since they were created separately.
+It will look something like this:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span>() {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span> a </span><span style="font-weight:bold;color:#a71d5d;">= &amp;</span><span>A::new() </span><span style="font-weight:bold;color:#a71d5d;">as &amp;</span><span>dyn Foo;
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span> b </span><span style="font-weight:bold;color:#a71d5d;">= &amp;</span><span>A::new() </span><span style="font-weight:bold;color:#a71d5d;">as &amp;</span><span>dyn Foo;
+</span><span>    assert_ne!(a </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Foo, b </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Foo);
+</span><span>    assert_eq!(a </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Foo, a </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Foo);
+</span><span>}
+</span><span style="font-weight:bold;color:#a71d5d;">trait </span><span>Foo {}
+</span><span style="font-weight:bold;color:#a71d5d;">struct </span><span>A;
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span>A {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">new</span><span>() -&gt; </span><span style="font-weight:bold;color:#a71d5d;">Self </span><span>{}
+</span><span>}
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span>Foo </span><span style="font-weight:bold;color:#a71d5d;">for </span><span>A {}
+</span></code></pre>
+<p>Now if you were only interested in comparing <em>trait objects</em> as pointers you can close this article, below I'll show a complete implementation of the <em>Observer</em> pattern with lots of <em>traits</em> and no <em>KISS</em>.</p>
+<h2 id="observer"><a class="zola-anchor" href="#observer" aria-label="Anchor link for: observer">Observer</a></h2>
+<p>I assume you know what <em>Observer</em> is. In two words: some objects subscribe (they are <em>Observers</em>) to news from other objects (they are <em>Subjects</em>). When <em>Subjects</em> change their state, they call a certain <em>Observers</em> method and pass information. I'll implement the pattern using an example from the book <em>&quot;Head First&quot;</em>.</p>
+<p>The task sounds like this: <em>The three players in the system are the weather station (the physical device that acquires the actual weather data), the WeatherData object (that tracks the data coming from the Weather Station and updates the displays), and the display that shows users the current weather conditions. The WeatherData object knows how to talk to the physical Weather Station, to get updated data. The WeatherData object then updates its displays for the three different display elements: Current Conditions (shows temperature, humidity, and pressure), Weather Statistics, and a simple forecast.</em></p>
+<p><img src="https://ybnesm.github.io/blah/articles/true-observer-pattern-rust/uml-diagram.png" alt="Uml diagram" /></p>
+<p>There are two ways to implement the pattern: <em>&quot;push Observer&quot;</em> and <em>&quot;pull Observer&quot;</em>. <em>&quot;Push&quot;</em> is when <em>Subjects</em> pass their data to the common interface method <code>update(data1, data2)</code>. <em>&quot;Pull&quot;</em> is when <em>Subjects</em> pass themselves to the common interface method, so every <em>Observer</em> can get data that it needs via API <code>update(&amp;I)</code>. The second option is considered <em>better</em>, because you won't need to change the signature of all methods when adding a new parameter. I show you <em>&quot;Pull&quot;</em>.</p>
+<p>First, we need to define a <em>trait</em> for <em>Subjects</em> - objects that produce some data. In our case, observers want to get weather data, so we also create some API for them:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">trait </span><span>Subject {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">register_observer</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self, observer: Weak&lt;RefCell&lt;dyn Observer&gt;&gt;);
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">remove_observer</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self, observer: Rc&lt;RefCell&lt;dyn Observer&gt;&gt;);
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">notify_observer</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self);
+</span><span>
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_temperature</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>;
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_humidity</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>;
+</span><span>}
+</span></code></pre>
+<p><code>Rc&lt;RefCell&lt;dyn Observer&gt;&gt;</code>: we want to notify followers and they probably want to change their state too, so we need interior mutability.<br />
+<code>Weak&lt;RefCell&lt;dyn Observer&gt;&gt;</code>: <em>subjects</em> do not own their observers, so we have only weak references to them. The observer can be removed at runtime. If this happens, we will simply remove the non-existent reference.</p>
+<p>Create one <em>Subject</em> that will report the current temperature:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[derive(Default)]
+</span><span style="font-weight:bold;color:#a71d5d;">struct </span><span>WeatherData {
+</span><span>    temperature: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>,
+</span><span>    humidity: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>,
+</span><span>    pressure: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>,
+</span><span>    observers: </span><span style="color:#0086b3;">Vec</span><span>&lt;Weak&lt;RefCell&lt;dyn Observer&gt;&gt;&gt;,
+</span><span>}
+</span></code></pre>
+<p>And its implementation. <em>Actually <code>set_measurements</code> is only needed to test our application, in real life data will be obtained from another source</em>:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">impl </span><span>WeatherData {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">new</span><span>() -&gt; Rc&lt;RefCell&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span>&gt;&gt; {
+</span><span>        Rc::new(RefCell::new(WeatherData::default()))
+</span><span>    }
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">set_measurements</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self, temp: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>, hum: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>, pres: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>) {
+</span><span>        </span><span style="font-weight:bold;color:#a71d5d;">...
+</span><span>        self.</span><span style="color:#62a35c;">measurements_changed</span><span>();
+</span><span>    }
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">measurements_changed</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self) {
+</span><span>        self.</span><span style="color:#62a35c;">notify_observer</span><span>();
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p><em>Subject</em> implementation for <em>WeatherData</em>:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">impl </span><span>Subject </span><span style="font-weight:bold;color:#a71d5d;">for </span><span>WeatherData {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">register_observer</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self, observer: Weak&lt;RefCell&lt;dyn Observer&gt;&gt;) {
+</span><span>        self.observers.</span><span style="color:#62a35c;">push</span><span>(observer);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">remove_observer</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self, observer: Rc&lt;RefCell&lt;dyn Observer&gt;&gt;) {
+</span><span>        self.observers.</span><span style="color:#62a35c;">retain</span><span>(|obj| {
+</span><span>            obj.</span><span style="color:#62a35c;">upgrade</span><span>().</span><span style="color:#62a35c;">map_or</span><span>(</span><span style="color:#0086b3;">false</span><span>, |left_obs| {
+</span><span>                </span><span style="font-weight:bold;color:#a71d5d;">&amp;*</span><span>left_obs.</span><span style="color:#62a35c;">borrow</span><span>() </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Observer
+</span><span>                    </span><span style="font-weight:bold;color:#a71d5d;">!= &amp;*</span><span>observer.</span><span style="color:#62a35c;">borrow</span><span>() </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Observer
+</span><span>            })
+</span><span>        })
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">notify_observer</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self) {
+</span><span>        </span><span style="font-style:italic;color:#969896;">// Removing references to dropped observers
+</span><span>        self.observers.</span><span style="color:#62a35c;">retain</span><span>(|obj| obj.</span><span style="color:#62a35c;">upgrade</span><span>().</span><span style="color:#62a35c;">is_some</span><span>());
+</span><span>
+</span><span>        </span><span style="font-weight:bold;color:#a71d5d;">for</span><span> observer </span><span style="font-weight:bold;color:#a71d5d;">in </span><span>self.observers.</span><span style="color:#62a35c;">iter</span><span>() {
+</span><span>            observer
+</span><span>                .</span><span style="color:#62a35c;">upgrade</span><span>()
+</span><span>                .</span><span style="color:#62a35c;">expect</span><span>(</span><span style="color:#183691;">&quot;old links have been deleted&quot;</span><span>)
+</span><span>                .</span><span style="color:#62a35c;">borrow_mut</span><span>()
+</span><span>                .</span><span style="color:#62a35c;">update</span><span>(self.temperature, self.humidity, self.pressure);
+</span><span>        }
+</span><span>    }
+</span><span>    
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_temperature</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">f32 </span><span>{
+</span><span>        self.temperature
+</span><span>    }
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_humidity</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">f32 </span><span>{
+</span><span>        self.humidity
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Each time before removing or notifying observers we delete nonexistent references (converting from <em>Weak</em> to <em>Rc</em> returns <em>None</em>: <code>weak.upgrade().is_some()</code>. All implementations of the <em>Observer</em> pattern that I've seen have had no option to <em>unsubscribe</em> from <em>subject</em>. I did it 🙂. In some cases, the <em>generic vector</em> <code>observers: Vec&lt;impl Foo&gt;</code> was used, and in some cases, this option was completely ignored, which is pointless, since it is one of the power features of the pattern.</p>
+<p>Let's understand what's going on here:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span>self.observers.</span><span style="color:#62a35c;">retain</span><span>(|obj| {
+</span><span>    obj.</span><span style="color:#62a35c;">upgrade</span><span>().</span><span style="color:#62a35c;">map_or</span><span>(</span><span style="color:#0086b3;">false</span><span>, |left_obs| {
+</span><span>        </span><span style="font-weight:bold;color:#a71d5d;">&amp;*</span><span>left_obs.</span><span style="color:#62a35c;">borrow</span><span>() </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Observer
+</span><span>            </span><span style="font-weight:bold;color:#a71d5d;">!= &amp;*</span><span>observer.</span><span style="color:#62a35c;">borrow</span><span>() </span><span style="font-weight:bold;color:#a71d5d;">as *const</span><span> dyn Observer
+</span><span>    })
+</span><span>})
+</span></code></pre>
+<p>We are removing a particular <em>observer</em> from our list of subscribers. <code>retain</code> leaves only those elements in the vector for which we return <em>true</em>. After checking that the pointer to <em>observer</em> still exists - <code>upgrade</code>, we borrow the value from <code>RefCell</code>, and since it doesn't return <code>&amp;dyn Observer</code>, but returns <code>Ref&lt;'_, T&gt;</code>, we need to dereference that value manually. To get the actual pointer, we need to convert our <code>dyn Observer</code> to <code>&amp;dyn Observer</code>, and only after all these operations does Rust perform the cast to <code>*const dyn Observer</code>.</p>
+<p>Let's move on to the <em>Observer</em> trait. Note that we pass only a reference to a <em>Subject</em> object to get only the data we need (<em>Pull Observer</em>):</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">trait </span><span>Observer {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">update</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self, subject: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>dyn Subject);
+</span><span>}
+</span></code></pre>
+<p>And one more <em>trait</em> but this is for our specific task (and to freak out). There is a lot of code outside of the scope of this article, most of which is boilerplate code for our current specific task:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">trait </span><span>DisplayElement {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>self);
+</span><span>}
+</span></code></pre>
+<p>This <em>trait</em> will help us display the current weather (or not only the weather) in different formats.</p>
+<p>And structure that has <em>Observer</em> and <em>DisplayElement</em> traits together:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">struct </span><span>CurrentConditionsDisplay {
+</span><span>    weather_data: Weak&lt;RefCell&lt;dyn Subject&gt;&gt;,
+</span><span>    temperature: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>,
+</span><span>    humidity: </span><span style="font-weight:bold;color:#a71d5d;">f32</span><span>,
+</span><span>}
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span>CurrentConditionsDisplay {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">new</span><span>(weather_data: Rc&lt;RefCell&lt;dyn Subject&gt;&gt;) -&gt; Rc&lt;RefCell&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span>&gt;&gt; {
+</span><span>        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span> obj </span><span style="font-weight:bold;color:#a71d5d;">= </span><span>Rc::new(RefCell::new(</span><span style="font-weight:bold;color:#a71d5d;">Self </span><span>{
+</span><span>            weather_data: Rc::downgrade(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>weather_data),
+</span><span>            temperature: </span><span style="color:#0086b3;">0.0</span><span>,
+</span><span>            humidity: </span><span style="color:#0086b3;">0.0</span><span>,
+</span><span>        }));
+</span><span>        weather_data
+</span><span>            .</span><span style="color:#62a35c;">borrow_mut</span><span>()
+</span><span>            .</span><span style="color:#62a35c;">register_observer</span><span>(Rc::downgrade(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>obj) </span><span style="font-weight:bold;color:#a71d5d;">as </span><span>Weak&lt;RefCell&lt;dyn Observer&gt;&gt;);
+</span><span>        obj
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Everything happens here: a new object is created and moved to two smart pointers so that you don't have to do it manually every time in the main; subscribe to the weather feed. We keep a reference to <em>dyn Subject</em> so that you can unsubscribe from news in the future, but I did not write such a method, we will do it manually later.</p>
+<p>And the last part of <em>Observer</em> pattern, nothing special:</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">impl </span><span>Observer </span><span style="font-weight:bold;color:#a71d5d;">for </span><span>CurrentConditionsDisplay {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">update</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span>self, subject: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>dyn Subject) {
+</span><span>        self.temperature </span><span style="font-weight:bold;color:#a71d5d;">=</span><span> subject.</span><span style="color:#62a35c;">get_temperature</span><span>();
+</span><span>        self.humidity </span><span style="font-weight:bold;color:#a71d5d;">=</span><span> subject.</span><span style="color:#62a35c;">get_humidity</span><span>();
+</span><span>        self.</span><span style="color:#62a35c;">display</span><span>()
+</span><span>    }
+</span><span>}
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span>DisplayElement </span><span style="font-weight:bold;color:#a71d5d;">for </span><span>CurrentConditionsDisplay {
+</span><span>    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span>(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span>self) {
+</span><span>        println!(
+</span><span>            </span><span style="color:#183691;">&quot;Current conditions: </span><span style="color:#0086b3;">{}</span><span style="color:#183691;"> F degrees and </span><span style="color:#0086b3;">{}</span><span style="color:#183691;"> humidity.&quot;</span><span>,
+</span><span>            self.temperature, self.humidity
+</span><span>        );
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h2 id="println-works-lol"><a class="zola-anchor" href="#println-works-lol" aria-label="Anchor link for: println-works-lol">Println!(&quot;works, lol!&quot;)</a></h2>
+<p>And in the old tradition of design patterns, we only test this with <em>print</em> statements. But in this case, it will not be very easy to do, because we have a lot of <em>smart pointers</em>, so we also have to be smart 👁👄👁 to turn them into something human.</p>
+<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">let</span><span> weather </span><span style="font-weight:bold;color:#a71d5d;">= </span><span>WeatherData::new();
+</span><span style="font-weight:bold;color:#a71d5d;">let</span><span> display1 </span><span style="font-weight:bold;color:#a71d5d;">= </span><span>CurrentConditionsDisplay::new(weather.</span><span style="color:#62a35c;">clone</span><span>());
+</span><span style="font-weight:bold;color:#a71d5d;">let</span><span> display2 </span><span style="font-weight:bold;color:#a71d5d;">= </span><span>StatisticsDisplay::new(weather.</span><span style="color:#62a35c;">clone</span><span>());
+</span><span>
+</span><span>println!(</span><span style="color:#183691;">&quot;Set #1:&quot;</span><span>);
+</span><span>weather.</span><span style="color:#62a35c;">borrow_mut</span><span>().</span><span style="color:#62a35c;">set_measurements</span><span>(</span><span style="color:#0086b3;">10.0</span><span>, </span><span style="color:#0086b3;">15.0</span><span>, </span><span style="color:#0086b3;">20.0</span><span>);
+</span><span>
+</span><span>display1
+</span><span>    .</span><span style="color:#62a35c;">borrow</span><span>()
+</span><span>    .weather_data
+</span><span>    .</span><span style="color:#62a35c;">upgrade</span><span>()
+</span><span>    .</span><span style="color:#62a35c;">unwrap</span><span>()
+</span><span>    .</span><span style="color:#62a35c;">borrow_mut</span><span>()
+</span><span>    .</span><span style="color:#62a35c;">remove_observer</span><span>(display1.</span><span style="color:#62a35c;">clone</span><span>());
+</span><span style="font-weight:bold;color:#a71d5d;">...
+</span></code></pre>
+<p>To unsubscribe from the news, we had to first borrow data from <em>RefCell</em>, then try to convert <em>Weak -&gt; Rc</em>, then borrow the object again as mutable, because after unsubscribing the notifier changes its state. And only then call an <em>unsubscribe</em> with a cloned <em>Rc</em> pointer.</p>
+<p>We run it and see that the unsubscribe works, now the first object does not receive new weather data:</p>
+<pre style="background-color:#ffffff;color:#323232;"><code><span>Set #1:
+</span><span>Current conditions: 10 F degrees and 15 humidity.
+</span><span>Avg/Min/Max temperature = 10/10/10.
+</span><span>Set #2:
+</span><span>Avg/Min/Max temperature = 15/10/20.
+</span><span>Set #3:
+</span></code></pre>
+<p>&quot;Avg/Min/Max&quot; - this is the output of the second object <code>StatisticsDisplay</code>, the code of which I did not show because it is similar to the <code>CurrentConditionsDisplay</code>. I also removed it from the news before <em>Set #3</em>.</p>
+<h2 id="what-we-achieved"><a class="zola-anchor" href="#what-we-achieved" aria-label="Anchor link for: what-we-achieved">What we achieved</a></h2>
+<ul>
+<li>We disgraced all OOP principles and wrote ridiculous code that no one will ever write in their life.</li>
+<li>We have implemented the Observer design pattern; I have read the second chapter of <em>&quot;Head First&quot;</em> and can continue reading.</li>
+<li>We compared trait objects by reference without <em>third-party</em> libraries.</li>
+<li>Composition over inheritance :)</li>
+<li>Encapsulation :)</li>
+</ul>
+<h2 id="hell-yes"><a class="zola-anchor" href="#hell-yes" aria-label="Anchor link for: hell-yes">Hell Yes</a></h2>
+<p>Huh, I don't know why I showed so much code when I could just comment out the code and put it on the Rust Playground. Feel free to submit corrections. Link to the code in the <em>Revisions</em> section. Maybe because I wanted to write my first article, which will receive many corrections before it becomes &quot;correct&quot;. Because at the time of writing the article, I have only been studying this grail for 2 months. Therefore, if you saw any syntax error (I hate English articles), or my ignorance in some Rust issue, please contact: <a href="https://www.reddit.com/r/rust/comments/115fejz/true_observer_pattern_with_unsubscribe_mechanism/?utm_source=share&amp;utm_medium=web2x&amp;context=3"><em>Reddit post</em></a> or <em>yurii.shymon@gmail.com</em>.</p>
+<p>Cheers 🦆</p>
+<hr />
+<h2 id="revisions"><a class="zola-anchor" href="#revisions" aria-label="Anchor link for: revisions">Revisions</a></h2>
+<ul>
+<li>2023-02-19: <a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2021&amp;gist=b2d927d15a4e603d844edf09178a9ed0">Compare trait objects with <code>*const</code> instead of <code>PartialEq</code> and <code>uuid</code></a></li>
+<li>2023-02-18: <a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2021&amp;gist=2b6b1e4b30d024c50fc3cba42516e98e">Changed implementation from <em>Push</em> to <em>Pull</em> Observer</a></li>
+<li>2023-02-17: <a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2021&amp;gist=784ec053e7bcb8f2d4ebe4a36d902ef0">Original post</a></li>
+</ul>
+
+</article>
+
+</body>
+
+</html>

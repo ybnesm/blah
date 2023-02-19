@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+Allow: /
+Sitemap: https://ybnesm.github.io/blah/sitemap.xml
